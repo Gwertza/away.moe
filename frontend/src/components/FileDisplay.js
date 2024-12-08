@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { BASE_URL } from "../config";
 
 const FileHandler = () => {
   const { uniqueId } = useParams();
   const [data, setData] = useState(null);
   const [notFound, setNotFound] = useState(false);
-
+  
   useEffect(() => {
-  // Check if the entry exists for the unique ID
-    fetch(`http://localhost:5000/api/fetch_info/${uniqueId}`)
+    // Check if the entry exists for the unique ID
+    fetch(`${BASE_URL}/api/fetch_info/${uniqueId}`)
       .then((res) => {
         if (!res.ok) {
           throw new Error("Network response was not ok");
@@ -23,8 +24,7 @@ const FileHandler = () => {
         }
       })
       .catch(() => setNotFound(true));
-}, [uniqueId]);
-
+  }, [uniqueId]);
 
   if (notFound) {
     return <UploadForm uniqueId={uniqueId} />;
@@ -37,7 +37,7 @@ const FileHandler = () => {
 
 const DownloadPage = ({ data }) => {
   const handleDownload = () => {
-    fetch(`http://localhost:5000/api/download/${data.unique_id}`)
+    fetch(`${BASE_URL}/api/download/${data.unique_id}`)
       .then((res) => {
         if (!res.ok) {
           throw new Error("Failed to download the file");
@@ -83,7 +83,7 @@ const UploadForm = ({ uniqueId }) => {
     formData.append("text", text);
     formData.append("ttl", date);
 
-    fetch(`http://localhost:5000/api/upload/${uniqueId}`, {
+    fetch(`${BASE_URL}/api/upload/${uniqueId}`, {
       method: "POST",
       body: formData,
     })

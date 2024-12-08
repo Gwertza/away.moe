@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { BASE_URL } from "../config";
 
 const UploadForm = () => {
   const [uniqueId, setUniqueId] = useState("");
@@ -14,7 +15,7 @@ const UploadForm = () => {
     formData.append("text", text);
     formData.append("date", date);
 
-    fetch(`http://localhost:5000/api/upload/${uniqueId}`, {
+    fetch(`${BASE_URL}/api/upload/${uniqueId}`, {
       method: "POST",
       body: formData,
     })
