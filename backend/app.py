@@ -67,6 +67,8 @@ def download(unique_id: str):
         return jsonify({"message": "File does not exist"}), 400
     path = db.retrieve_file_path(unique_id)
     filename = db.retrieve_file_name(unique_id)
+    if db.get_instant_expire(unique_id):
+        db.delete_from_database(unique_id)
     print(f"{path=} {filename=}")
     return send_from_directory("",
                                str(path),
