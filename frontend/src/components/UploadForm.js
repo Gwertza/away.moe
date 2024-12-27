@@ -34,11 +34,6 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!file) {
-      alert("Please select a file before uploading.");
-      return;
-    }
-
     const formData = new FormData();
     formData.append("file", file);
     formData.append("text", text);
@@ -86,7 +81,7 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
             style={styles.input}
             required
           >
-            <option value="-1">Delete Upon Viewing (1 Day for entries with files)</option>
+            <option value="-1">Delete Upon Viewing / Downloading (or 1 week)</option>
             <option value="1m">1 Minute</option>
             <option value="10m">10 Minutes</option>
             <option value="1h">1 Hour</option>
