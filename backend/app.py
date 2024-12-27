@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime, timedelta
 
-from flask import Flask, request, jsonify, send_from_directory, render_template
+from flask import Flask, request, jsonify, send_from_directory, render_template, send_file
 from flask_cors import CORS
 from werkzeug.datastructures import FileStorage
 
@@ -47,15 +47,20 @@ def upload(unique_id: str):
 @app.route("/api/fetch_info/<unique_id>", methods=["GET"])
 def fetch_info(unique_id: str):
     json_response = {"unique_id": unique_id}
-    if db.entry_present(unique_id) and not db.check_expired(unique_id):
-        json_response["id_present"] = True
-        json_response["text"] = db.retrieve_text(unique_id)
-        if db.file_present(unique_id):
-            json_response["filename"] = db.retrieve_file_name(unique_id)
-        elif db.get_instant_expire(unique_id):
-            db.delete_from_database(unique_id)
-        return jsonify(json_response)
 
+    if db.entry_present(unique_id):
+        if db.check_expired(unique_id):
+            db.delete_from_database(unique_id)
+            json_response["id_present"] = False
+            return jsonify(json_response), 200
+        else:
+            json_response["id_present"] = True
+            json_response["text"] = db.retrieve_text(unique_id)
+            if db.file_present(unique_id):
+                json_response["filename"] = db.retrieve_file_name(unique_id)
+            elif db.get_instant_expire(unique_id):
+                db.delete_from_database(unique_id)
+            return jsonify(json_response)
     else:
         json_response["id_present"] = False
         return jsonify(json_response), 200
@@ -70,10 +75,7 @@ def download(unique_id: str):
     if db.get_instant_expire(unique_id):
         db.delete_from_database(unique_id)
     print(f"{path=} {filename=}")
-    return send_from_directory("",
-                               str(path),
-                               as_attachment=True,
-                               download_name=filename)
+    return send_file(str(path), as_attachment=True, download_name=filename)
 
 
 def get_future_timestamp(expiration_str: str) -> tuple[int, bool] | tuple[None, None]:

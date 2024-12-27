@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import uuid
 from datetime import datetime, timedelta
@@ -47,6 +48,7 @@ class SQLiteDatabase(Database):
                     ExpiryTime DATETIME DEFAULT NULL,
                     ID TEXT,
                     FOREIGN KEY (ID) REFERENCES URLMetadata(ID)
+                        ON DELETE SET NULL
                 );
             """)
 
@@ -96,6 +98,7 @@ class SQLiteDatabase(Database):
             cursor.execute("SELECT InstantExpire FROM URLMetadata WHERE ID = ?", (unique_id,))
             result = cursor.fetchone()
             if result and result[0]:  # If InstantExpire is True
+                print("updated time to +1 hour")
                 cursor.execute("""
                     UPDATE File
                     SET ExpiryTime = DATETIME('now', '+1 hour')
@@ -155,6 +158,7 @@ class SQLiteDatabase(Database):
                 self._cleanup_db()
                 threading.Event().wait(timeout=3600)  # Wait for 1 hour
 
+        self._cleanup_db()
         cleanup_thread = threading.Thread(target=schedule_task, daemon=True)
         cleanup_thread.start()
 
@@ -170,7 +174,23 @@ class SQLiteDatabase(Database):
                 AND ExpiryTime < DATETIME('now')
             """)
 
-            # Delete from File where ExpiryTime is in the past
+            # Fetch the paths of files that need to be unlinked
+            cursor.execute("""
+                SELECT Path
+                FROM File
+                WHERE ExpiryTime IS NOT NULL
+                AND ExpiryTime < DATETIME('now')
+            """)
+            files_to_delete = cursor.fetchall()
+
+            # Unlink the files
+            for file in files_to_delete:
+                file_path = file[0]
+                if os.path.exists(file_path):
+                    os.unlink(file_path)  # Deletes the file from the file system
+                print(f"Unlinked {file_path}")
+
+            # Delete the corresponding table entries
             cursor.execute("""
                 DELETE FROM File
                 WHERE ExpiryTime IS NOT NULL
