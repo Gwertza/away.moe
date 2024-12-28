@@ -23,7 +23,7 @@ const LandingPage = () => {
         <h2>How to Use:</h2>
         <ol style={styles.list}>
           <li>Upload a file or text to a Unique ID.</li>
-          <li>Share the ID with others to allow them to access the content.</li>
+          <li>Share the ID with others (or yourself on another computer) to allow them to access the content.</li>
           <li>The content will be deleted after the specified time, making it unavailable to others.</li>
         </ol>
       </div>
