@@ -1,6 +1,4 @@
-// src/components/DownloadPage.js
-
-import React, { useState } from "react";
+import React from "react";
 import { BASE_URL } from "../config";
 
 const DownloadPage = ({ data, setDownloadProgress, downloadProgress }) => {
@@ -41,43 +39,53 @@ const DownloadPage = ({ data, setDownloadProgress, downloadProgress }) => {
       });
   };
 
-  const isImage = data.filename.match(/\.(jpeg|jpg|gif|png|bmp)$/i);
+  const isImage = data.filename?.match(/\.(jpeg|jpg|gif|png|bmp)$/i);
+  const hasFile = Boolean(data.filename);
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
       <h1>Entry Found</h1>
-      <p><strong>Text:</strong> {data.text}</p>
-      <p><strong>Filename:</strong> {data.filename}</p>
+      <p>
+        <strong>Text:</strong> {data.text}
+      </p>
 
-      {isImage ? (
-        <div>
-          <h3>Image:</h3>
-          <img
-            src={`${BASE_URL}/api/download/${data.unique_id}`}
-            alt="Preview"
-            style={{ maxWidth: "100%", maxHeight: "500px", marginTop: "20px" }}
-          />
-        </div>
-      ) : (
-        <div>
-          {/* Display download progress bar */}
-          {downloadProgress > 0 && downloadProgress < 100 && (
-            <div style={{ marginTop: "20px", width: "100%", backgroundColor: "#ddd", borderRadius: "8px" }}>
-              <div
-                style={{
-                  height: "10px",
-                  width: `${downloadProgress}%`,
-                  backgroundColor: "#4caf50",
-                  borderRadius: "8px",
-                }}
-              ></div>
+      {hasFile && (
+        <>
+          <p>
+            <strong>Filename:</strong> {data.filename}
+          </p>
+
+          {isImage ? (
+            <div>
+              <h3>Image:</h3>
+              <img
+                src={`${BASE_URL}/api/download/${data.unique_id}`}
+                alt="Preview"
+                style={{ maxWidth: "100%", maxHeight: "500px", marginTop: "20px" }}
+              />
+            </div>
+          ) : (
+            <div>
+              {/* Display download progress bar */}
+              {downloadProgress > 0 && downloadProgress < 100 && (
+                <div style={{ marginTop: "20px", width: "100%", backgroundColor: "#ddd", borderRadius: "8px" }}>
+                  <div
+                    style={{
+                      height: "10px",
+                      width: `${downloadProgress}%`,
+                      backgroundColor: "#4caf50",
+                      borderRadius: "8px",
+                    }}
+                  ></div>
+                </div>
+              )}
+
+              <button onClick={handleDownload} style={styles.button}>
+                Download
+              </button>
             </div>
           )}
-
-          <button onClick={handleDownload} style={styles.button}>
-            Download
-          </button>
-        </div>
+        </>
       )}
     </div>
   );

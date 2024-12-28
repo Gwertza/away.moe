@@ -49,7 +49,7 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
         },
       })
       .then(() => {
-        alert("File uploaded successfully!");
+        alert("Uploaded successfully!");
         setUploadProgress(0); // Reset progress
       })
       .catch((error) => {
@@ -62,7 +62,7 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
   return (
     <div style={styles.container}>
       <h1>away.moe</h1>
-      <p>Upload a file for ID: <strong>{uniqueId}</strong></p>
+      <p>Upload stuff for ID: <strong>{uniqueId}</strong></p>
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.formGroup}>
           <label>Text:</label>
