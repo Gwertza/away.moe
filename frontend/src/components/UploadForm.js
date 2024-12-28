@@ -1,19 +1,43 @@
-// src/components/UploadForm.js
-
-import React, { useState } from "react";
+import React, {useEffect, useState} from "react";
 import axios from "axios";
 import { BASE_URL } from "../config";
+
 
 const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
   const [file, setFile] = useState(null);
   const [text, setText] = useState("");
   const [date, setDate] = useState("-1");
   const [dragging, setDragging] = useState(false);
+  const [error, setError] = useState(""); // Track error messages
+  const [isUploaded, setIsUploaded] = useState(false); // Track upload success
 
+  const MAX_FILE_SIZE_MB = 50;
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      // Show prompt if the form is not yet submitted
+      if (isUploaded) {
+        e.preventDefault();
+        e.returnValue = ""; // Modern browsers require this for the confirmation dialog
+      }
+    };
+
+    // Add the listener
+    window.addEventListener("beforeunload", handleBeforeUnload);
+  });
+  // Handle file selection
   const handleFileSelect = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    if (selectedFile && selectedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      setError(`File size exceeds ${MAX_FILE_SIZE_MB} MB`);
+      setFile(null); // Clear the file
+    } else {
+      setError(""); // Clear any previous error
+      setFile(selectedFile);
+    }
   };
 
+  // Handle drag events
   const handleDragOver = (e) => {
     e.preventDefault();
     setDragging(true);
@@ -26,11 +50,17 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
   const handleDrop = (e) => {
     e.preventDefault();
     setDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile && droppedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      setError(`File size exceeds ${MAX_FILE_SIZE_MB} MB`);
+      setFile(null); // Clear the file
+    } else {
+      setError(""); // Clear any previous error
+      setFile(droppedFile);
     }
   };
 
+  // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -51,18 +81,50 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
       .then(() => {
         alert("Uploaded successfully!");
         setUploadProgress(0); // Reset progress
+        setIsUploaded(true); // Set to true after successful upload
+
       })
       .catch((error) => {
         console.error("Error uploading file:", error);
-        alert("Failed to upload the file.");
+        alert("Failed to upload the file. Reason: " + error.message);
         setUploadProgress(0); // Reset progress
       });
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
+  if (isUploaded) {
+  return (
+    <div style={styles.container}>
+      <h1>Upload Successful!</h1>
+      <p>
+        Your upload was successful. On any other computer or smartphone, visit:
+      </p>
+      <h2>
+        <a
+          href={`https://away.moe/${uniqueId}`} // Link to the upload URL
+          rel="noopener noreferrer" // For security reasons when opening in a new tab
+          style={styles.link} // Custom styling for the link (optional)
+        >
+          away.moe/{uniqueId}
+        </a>
+      </h2>
+      <p>Thank you for using away.moe!</p>
+    </div>
+  );
+}
+
   return (
     <div style={styles.container}>
       <h1>away.moe</h1>
-      <p>Upload stuff for ID: <strong>{uniqueId}</strong></p>
+      <p>
+        Upload stuff for ID: <strong>{uniqueId}</strong>
+      </p>
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.formGroup}>
           <label>Text:</label>
@@ -81,7 +143,9 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
             style={styles.input}
             required
           >
-            <option value="-1">Delete Upon Viewing / Downloading (or 1 week)</option>
+            <option value="-1">
+              Delete Upon Viewing / Downloading (or 1 week)
+            </option>
             <option value="1m">1 Minute</option>
             <option value="10m">10 Minutes</option>
             <option value="1h">1 Hour</option>
@@ -97,19 +161,31 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          onKeyDown={handleKeyDown}
+          tabIndex={0}// Add keydown to the drop zone
         >
-          <label htmlFor="fileInput" style={{ cursor: "pointer" }}>
+          <label htmlFor="fileInput" style={styles.label}>
             Drag & Drop your file here or click to select
+            (Max 50 MB)
           </label>
           <input
             id="fileInput"
             type="file"
             onChange={handleFileSelect}
-            style={styles.fileInput} // Hidden input
+            style={styles.fileInput}
           />
         </div>
 
-        {file && <p>Selected File: {file.name}</p>}
+        {error && <p style={styles.error}>{error}</p>}
+
+        {file && !error && (
+          <>
+            <p style={{ marginBottom: "4px" }}>Selected File: {file.name}</p>
+            <p style={{ marginTop: "0px" }}>
+              File Size: {(file.size / (1024 * 1024)).toFixed(2)} MB
+            </p>
+          </>
+        )}
 
         {uploadProgress > 0 && (
           <div style={styles.progressBar}>
@@ -119,7 +195,11 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
           </div>
         )}
 
-        <button type="submit" style={styles.button}>
+        <button
+          type="submit"
+          style={styles.button}
+          disabled={error} // Disable button if no valid file or error
+        >
           Upload
         </button>
       </form>
@@ -169,13 +249,25 @@ const styles = {
     textAlign: "center",
     backgroundColor: "#fefefe",
     cursor: "pointer",
+    position: "relative", // Required for absolute positioning of the file input
   },
   dropZoneActive: {
     backgroundColor: "#e0f7fa",
     borderColor: "#00796b",
   },
+  label: {
+    display: "block",
+    cursor: "pointer",
+    textAlign: "center",
+  },
   fileInput: {
-    display: "none",
+    position: "absolute", // Ensure the file input covers the entire drop zone
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    opacity: 0, // Hide the file input visually but keep it functional
+    zIndex: 1, // Ensure it sits above other content
   },
   progressBar: {
     width: "100%",
@@ -205,6 +297,22 @@ const styles = {
     backgroundColor: "#007BFF",
     color: "white",
     cursor: "pointer",
+  },
+  error: {
+    color: "red",
+    marginTop: "10px",
+    fontSize: "14px",
+  },
+  link: {
+    color: "#007BFF", // Set the color of the link
+    textDecoration: "none", // Remove underline
+    fontWeight: "bold", // Make the text bold (optional)
+    transition: "color 0.3s", // Smooth color transition when hovering
+  },
+  // Optionally add hover effects
+  linkHover: {
+    color: "#0056b3", // Change color when hovering
+    textDecoration: "underline", // Underline on hover
   },
 };
 

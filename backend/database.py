@@ -17,7 +17,7 @@ class Database(ABC):
 
     @abstractmethod
     def add_to_database(self, unique_id: str, file_name: str, file: FileStorage, text: str, expiration_time: int,
-                        instant_expire: bool):
+                        instant_expire: bool, ip_address: str):
         raise NotImplementedError
 
     @abstractmethod
@@ -109,7 +109,8 @@ class PythonDatabase(Database):
                         file: FileStorage | None,
                         text: str,
                         expiration_time: int,
-                        instant_expire: bool = False):
+                        instant_expire: bool = False,
+                        ip_address: str | None = None):
         """Add a file entry to the database."""
         file_entry_path = self.db_path / unique_id
 

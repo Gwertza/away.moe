@@ -5,14 +5,21 @@ from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_from_directory, render_template, send_file
 from flask_cors import CORS
 from werkzeug.datastructures import FileStorage
+from werkzeug.exceptions import RequestEntityTooLarge
 
 from sql_db import SQLiteDatabase
 from database import PythonDatabase, Database
 
 app = Flask(__name__, static_folder="../frontend/build", static_url_path="/")
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB limit
+
 db: Database = SQLiteDatabase()
 # db: Database = PythonDatabase()
 CORS(app)
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_file_too_large(e):
+    return jsonify({"error": "File size exceeds the 50 MB limit"}), 413
 
 @app.route("/")
 def serve_react(self):
@@ -40,7 +47,7 @@ def upload(unique_id: str):
     if db.entry_present(unique_id) and not db.check_expired(unique_id):
         return jsonify({"message": "Entry already exists"}), 400
 
-    db.add_to_database(unique_id, file.filename if file is not None else None, file, text, expiration_unix, instant_expire)
+    db.add_to_database(unique_id, file.filename if file is not None else None, file, text, expiration_unix, instant_expire, request.remote_addr)
     return jsonify({"message": "File uploaded successfully"}), 200
 
 
@@ -58,6 +65,7 @@ def fetch_info(unique_id: str):
             json_response["text"] = db.retrieve_text(unique_id)
             if db.file_present(unique_id):
                 json_response["filename"] = db.retrieve_file_name(unique_id)
+                json_response["filesize"] = os.path.getsize(db.retrieve_file_path(unique_id))
             elif db.get_instant_expire(unique_id):
                 db.delete_from_database(unique_id)
             return jsonify(json_response)

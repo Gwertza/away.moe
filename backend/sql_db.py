@@ -27,7 +27,8 @@ class SQLiteDatabase(Database):
                     ID TEXT PRIMARY KEY,
                     UploadTime DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Store as UNIX timestamp
                     ExpiryTime DATETIME,
-                    InstantExpire BOOLEAN DEFAULT 0
+                    InstantExpire BOOLEAN DEFAULT 0,
+                    IP TEXT DEFAULT NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS Text
@@ -65,17 +66,18 @@ class SQLiteDatabase(Database):
         return cursor.fetchone() is not None
 
     def add_to_database(self, unique_id: str, file_name: str, file: FileStorage, text: str, expiration_time: int,
-                        instant_expire: bool):
+                        instant_expire: bool, ip_address: str = None):
         print(f"unique_id: {unique_id}, expiration_time: {expiration_time}, instant_expire: {instant_expire}")
         """Add data to the database."""
         with self.conn:
             cursor = self.conn.cursor()
             cursor.execute("""
-                INSERT INTO URLMetadata (ID, ExpiryTime, InstantExpire)
-                VALUES (?, ?, ?)
+                INSERT INTO URLMetadata (ID, ExpiryTime, InstantExpire, IP)
+                VALUES (?, ?, ?, ?)
             """, (unique_id,
                   (datetime.fromtimestamp(expiration_time)).strftime("%Y-%m-%d %H:%M:%S") if expiration_time else None,  # Use integer timestamp directly
-                  int(bool(instant_expire))))
+                  int(bool(instant_expire)),
+                  ip_address))
             if text:
                 cursor.execute("""
                     INSERT INTO Text (Content, ID)
