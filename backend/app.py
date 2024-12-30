@@ -8,12 +8,12 @@ from werkzeug.datastructures import FileStorage
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from sql_db import SQLiteDatabase
-from database import PythonDatabase, Database
+from database import Database, FileEntry
 
 app = Flask(__name__, static_folder="../frontend/build", static_url_path="/")
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB limit
 
-db: Database = SQLiteDatabase()
+db: SQLiteDatabase = SQLiteDatabase()
 # db: Database = PythonDatabase()
 CORS(app)
 
@@ -44,10 +44,20 @@ def upload(unique_id: str):
     if expiration_unix is None:
         return jsonify({"error": "Invalid expiration time given"}), 400
 
-    if db.entry_present(unique_id) and not db.check_expired(unique_id):
+
+    if db.entry_present(unique_id):
         return jsonify({"message": "Entry already exists"}), 400
 
-    db.add_to_database(unique_id, file.filename if file is not None else None, file, text, expiration_unix, instant_expire, request.remote_addr)
+    entry = FileEntry(
+        file_name=file.filename if file is not None else None,
+        text=text,
+        expiration_time=expiration_unix,
+        has_file=file is not None,
+        instant_expire=instant_expire,
+        ip_address=request.remote_addr
+    )
+
+    db.add_to_database(unique_id, entry, file)
     return jsonify({"message": "File uploaded successfully"}), 200
 
 
@@ -55,32 +65,36 @@ def upload(unique_id: str):
 def fetch_info(unique_id: str):
     json_response = {"unique_id": unique_id}
 
-    if db.entry_present(unique_id):
-        if db.check_expired(unique_id):
-            db.delete_from_database(unique_id)
-            json_response["id_present"] = False
-            return jsonify(json_response), 200
-        else:
-            json_response["id_present"] = True
-            json_response["text"] = db.retrieve_text(unique_id)
-            if db.file_present(unique_id):
-                json_response["filename"] = db.retrieve_file_name(unique_id)
-                json_response["filesize"] = os.path.getsize(db.retrieve_file_path(unique_id))
-            elif db.get_instant_expire(unique_id):
-                db.delete_from_database(unique_id)
-            return jsonify(json_response)
-    else:
+    entry = db.retrieve_entry(unique_id)
+
+    if not entry:
         json_response["id_present"] = False
         return jsonify(json_response), 200
+
+    if db.check_expired(entry):
+        db.delete_from_database(unique_id)
+        json_response["id_present"] = False
+        return jsonify(json_response), 200
+    else:
+        json_response["id_present"] = True
+        json_response["text"] = entry.text
+        if entry.has_file:
+            json_response["filename"] = entry.file_name
+            json_response["filesize"] = os.path.getsize(db.retrieve_file_path(unique_id))
+        elif entry.instant_expire:
+            db.delete_from_database(unique_id)
+        return jsonify(json_response)
 
 
 @app.route("/api/download/<unique_id>", methods=["GET"])
 def download(unique_id: str):
-    if not db.file_present(unique_id) or db.check_expired(unique_id):
+
+    entry = db.retrieve_entry(unique_id)
+    if not entry or not entry.has_file or db.check_expired(entry):
         return jsonify({"message": "File does not exist"}), 400
     path = db.retrieve_file_path(unique_id)
-    filename = db.retrieve_file_name(unique_id)
-    if db.get_instant_expire(unique_id):
+    filename = entry.file_name
+    if entry.instant_expire:
         db.delete_from_database(unique_id)
     print(f"{path=} {filename=}")
     return send_file(str(path), as_attachment=True, download_name=filename)

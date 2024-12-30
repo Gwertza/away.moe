@@ -7,7 +7,7 @@ import threading
 
 from werkzeug.datastructures import FileStorage
 
-from database import Database
+from database import Database, FileEntry
 
 
 class SQLiteDatabase(Database):
@@ -59,15 +59,64 @@ class SQLiteDatabase(Database):
         cursor.execute("SELECT 1 FROM URLMetadata WHERE ID = ?", (unique_id,))
         return cursor.fetchone() is not None
 
-    def file_present(self, unique_id: str) -> bool:
-        """Check if a file exists for a given entry in the File table."""
+    def retrieve_entry(self, unique_id: str) -> FileEntry | None:
+        """Retrieve an entry from the database and return it as a FileEntry object."""
         cursor = self.conn.cursor()
-        cursor.execute("SELECT 1 FROM File WHERE ID = ?", (unique_id,))
-        return cursor.fetchone() is not None
+        # Retrieve metadata from URLMetadata table
+        cursor.execute("""
+            SELECT ExpiryTime, InstantExpire, IP
+            FROM URLMetadata
+            WHERE ID = ?
+        """, (unique_id,))
+        metadata = cursor.fetchone()
 
-    def add_to_database(self, unique_id: str, file_name: str, file: FileStorage, text: str, expiration_time: int,
-                        instant_expire: bool, ip_address: str = None):
-        print(f"unique_id: {unique_id}, expiration_time: {expiration_time}, instant_expire: {instant_expire}")
+        if not metadata:
+            return None
+
+        # Parse metadata
+        expiry_time = int(datetime.strptime(metadata[0], "%Y-%m-%d %H:%M:%S").timestamp()) if metadata[0] else None
+        instant_expire = bool(metadata[1])
+        ip_address = metadata[2]
+
+        # Retrieve text content
+        cursor.execute("""
+            SELECT Content
+            FROM Text
+            WHERE ID = ?
+        """, (unique_id,))
+        text_result = cursor.fetchone()
+        text_content = text_result[0] if text_result else None
+
+        # Retrieve file information
+        cursor.execute("""
+            SELECT FileName
+            FROM File
+            WHERE ID = ?
+        """, (unique_id,))
+        file_result = cursor.fetchone()
+        file_name = file_result[0] if file_result else None
+        has_file = file_result is not None
+
+        # Return a FileEntry object
+        return FileEntry(
+            file_name=file_name,
+            text=text_content,
+            expiration_time=expiry_time,
+            has_file=has_file,
+            instant_expire=instant_expire,
+            ip_address=ip_address
+        )
+
+
+
+    # def file_present(self, unique_id: str) -> bool:
+    #     """Check if a file exists for a given entry in the File table."""
+    #     cursor = self.conn.cursor()
+    #     cursor.execute("SELECT 1 FROM File WHERE ID = ?", (unique_id,))
+    #     return cursor.fetchone() is not None
+
+    def add_to_database(self, unique_id, entry: FileEntry, file: FileStorage):
+        print(f"unique_id: {unique_id}, expiration_time: {entry.expiration_time}, instant_expire: {entry.instant_expire}")
         """Add data to the database."""
         with self.conn:
             cursor = self.conn.cursor()
@@ -75,14 +124,14 @@ class SQLiteDatabase(Database):
                 INSERT INTO URLMetadata (ID, ExpiryTime, InstantExpire, IP)
                 VALUES (?, ?, ?, ?)
             """, (unique_id,
-                  (datetime.fromtimestamp(expiration_time)).strftime("%Y-%m-%d %H:%M:%S") if expiration_time else None,  # Use integer timestamp directly
-                  int(bool(instant_expire)),
-                  ip_address))
-            if text:
+                  (datetime.fromtimestamp(entry.expiration_time)).strftime("%Y-%m-%d %H:%M:%S") if entry.expiration_time else None,  # Use integer timestamp directly
+                  int(entry.instant_expire),
+                  entry.ip_address))
+            if entry.text:
                 cursor.execute("""
                     INSERT INTO Text (Content, ID)
                     VALUES (?, ?)
-                """, (text, unique_id))
+                """, (entry.text, unique_id))
 
             if file:
                 file_path = f"./files/{uuid.uuid1()}"
@@ -91,7 +140,9 @@ class SQLiteDatabase(Database):
                 cursor.execute("""
                     INSERT INTO File (FileName, Path, ID)
                     VALUES (?, ?, ?)
-                """, (file_name, file_path, unique_id))
+                """, (entry.file_name, file_path, unique_id))
+
+
 
     def delete_from_database(self, unique_id: str):
         """Delete an entry and its associated data."""
@@ -116,6 +167,7 @@ class SQLiteDatabase(Database):
 
             self.conn.execute("DELETE FROM URLMetadata WHERE ID = ?", (unique_id,))
             print(f"deleted {unique_id}")
+
     def retrieve_file_path(self, unique_id: str) -> Path:
         """Retrieve the file path for a given entry."""
         cursor = self.conn.cursor()
@@ -123,35 +175,35 @@ class SQLiteDatabase(Database):
         result = cursor.fetchone()
         return Path(result[0]) if result else None
 
-    def retrieve_file_name(self, unique_id: str) -> str:
-        """Retrieve the file name for a given entry."""
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT FileName FROM File WHERE ID = ?", (unique_id,))
-        result = cursor.fetchone()
-        return result[0] if result else None
+    # def retrieve_file_name(self, unique_id: str) -> str:
+    #     """Retrieve the file name for a given entry."""
+    #     cursor = self.conn.cursor()
+    #     cursor.execute("SELECT FileName FROM File WHERE ID = ?", (unique_id,))
+    #     result = cursor.fetchone()
+    #     return result[0] if result else None
+    #
+    # def retrieve_text(self, unique_id: str) -> str:
+    #     """Retrieve the text content for a given entry."""
+    #     cursor = self.conn.cursor()
+    #     cursor.execute("SELECT Content FROM Text WHERE ID = ?", (unique_id,))
+    #     result = cursor.fetchone()
+    #     return result[0] if result else None
 
-    def retrieve_text(self, unique_id: str) -> str:
-        """Retrieve the text content for a given entry."""
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT Content FROM Text WHERE ID = ?", (unique_id,))
-        result = cursor.fetchone()
-        return result[0] if result else None
-
-    def check_expired(self, unique_id: str) -> bool:
-        """Check if an entry is expired."""
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT ExpiryTime FROM URLMetadata WHERE ID = ?", (unique_id,))
-        result = cursor.fetchone()
-        if result and result[0]:
-            return datetime.strptime(result[0], "%Y-%m-%d %H:%M:%S") < datetime.now()
-        return False
-
-    def get_instant_expire(self, unique_id: str) -> bool:
-        """Check if an entry is set to instant expire."""
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT InstantExpire FROM URLMetadata WHERE ID = ?", (unique_id,))
-        result = cursor.fetchone()
-        return result[0] if result else False
+    # def check_expired(self, unique_id: str) -> bool:
+    #     """Check if an entry is expired."""
+    #     cursor = self.conn.cursor()
+    #     cursor.execute("SELECT ExpiryTime FROM URLMetadata WHERE ID = ?", (unique_id,))
+    #     result = cursor.fetchone()
+    #     if result and result[0]:
+    #         return datetime.strptime(result[0], "%Y-%m-%d %H:%M:%S") < datetime.now()
+    #     return False
+    #
+    # def get_instant_expire(self, unique_id: str) -> bool:
+    #     """Check if an entry is set to instant expire."""
+    #     cursor = self.conn.cursor()
+    #     cursor.execute("SELECT InstantExpire FROM URLMetadata WHERE ID = ?", (unique_id,))
+    #     result = cursor.fetchone()
+    #     return result[0] if result else False
 
     def _start_cleanup_scheduler(self):
         """Start a background task to run cleanup_db every hour."""
