@@ -22,7 +22,12 @@ def handle_file_too_large(e):
     return jsonify({"error": "File size exceeds the 50 MB limit"}), 413
 
 @app.route("/")
-def serve_react(self):
+def serve_react():
+    """Serve the React app."""
+    return app.send_static_file("index.html")
+
+@app.route("/<unique_id>")
+def serve_react2(unique_id: str):
     """Serve the React app."""
     return app.send_static_file("index.html")
 
