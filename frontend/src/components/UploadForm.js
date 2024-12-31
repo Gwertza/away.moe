@@ -1,7 +1,6 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { BASE_URL } from "../config";
-
 
 const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
   const [file, setFile] = useState(null);
@@ -24,7 +23,31 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
 
     // Add the listener
     window.addEventListener("beforeunload", handleBeforeUnload);
-  });
+
+    // Add global paste event listener to capture pasted files
+    const handlePaste = (e) => {
+      const pastedFiles = e.clipboardData.files;
+      if (pastedFiles && pastedFiles[0]) {
+        const pastedFile = pastedFiles[0];
+        if (pastedFile.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+          setError(`File size exceeds ${MAX_FILE_SIZE_MB} MB`);
+          setFile(null); // Clear the file
+        } else {
+          setError(""); // Clear any previous error
+          setFile(pastedFile);
+        }
+      }
+    };
+
+    document.addEventListener("paste", handlePaste);
+
+    // Cleanup on unmount
+    return () => {
+      document.removeEventListener("paste", handlePaste);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isUploaded]);
+
   // Handle file selection
   const handleFileSelect = (e) => {
     const selectedFile = e.target.files[0];
@@ -64,6 +87,11 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    if (!file && !text) {
+      alert("Please select a file or enter text before uploading.");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
     formData.append("text", text);
@@ -79,7 +107,6 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
         },
       })
       .then(() => {
-        alert("Uploaded successfully!");
         setUploadProgress(0); // Reset progress
         setIsUploaded(true); // Set to true after successful upload
 
@@ -99,25 +126,25 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
   };
 
   if (isUploaded) {
-  return (
-    <div style={styles.container}>
-      <h1>Upload Successful!</h1>
-      <p>
-        Your upload was successful. On any other computer or smartphone, visit:
-      </p>
-      <h2>
-        <a
-          href={`https://away.moe/${uniqueId}`} // Link to the upload URL
-          rel="noopener noreferrer" // For security reasons when opening in a new tab
-          style={styles.link} // Custom styling for the link (optional)
-        >
-          away.moe/{uniqueId}
-        </a>
-      </h2>
-      <p>Thank you for using away.moe!</p>
-    </div>
-  );
-}
+    return (
+      <div style={styles.container}>
+        <h1>Upload Successful!</h1>
+        <p>
+          Your upload was successful. On any other computer or smartphone, visit:
+        </p>
+        <h2>
+          <a
+            href={`https://away.moe/${uniqueId}`} // Link to the upload URL
+            rel="noopener noreferrer" // For security reasons when opening in a new tab
+            style={styles.link} // Custom styling for the link (optional)
+          >
+            away.moe/{uniqueId}
+          </a>
+        </h2>
+        <p>Thank you for using away.moe!</p>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
@@ -162,10 +189,10 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onKeyDown={handleKeyDown}
-          tabIndex={0}// Add keydown to the drop zone
+          tabIndex={0} // Ensure the drop zone is focusable for keyboard interactions
         >
           <label htmlFor="fileInput" style={styles.label}>
-            Drag & Drop your file here or click to select
+            Drag & Drop, paste or click to select a file
             (Max 50 MB)
           </label>
           <input
@@ -308,11 +335,6 @@ const styles = {
     textDecoration: "none", // Remove underline
     fontWeight: "bold", // Make the text bold (optional)
     transition: "color 0.3s", // Smooth color transition when hovering
-  },
-  // Optionally add hover effects
-  linkHover: {
-    color: "#0056b3", // Change color when hovering
-    textDecoration: "underline", // Underline on hover
   },
 };
 
