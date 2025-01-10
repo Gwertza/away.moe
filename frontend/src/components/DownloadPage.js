@@ -45,7 +45,7 @@ const DownloadPage = ({ data, setDownloadProgress, downloadProgress }) => {
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
       <h1>Entry Found</h1>
-      <div style={{ textAlign: "left", maxWidth: "800px", margin: "0 auto" }}>
+      <div style={{ textAlign: "left", maxWidth: "800px", margin: "0 auto", position: "relative" }}>
         <strong>Text:</strong>
         <div style={{ 
           whiteSpace: "pre-wrap", 
@@ -55,6 +55,25 @@ const DownloadPage = ({ data, setDownloadProgress, downloadProgress }) => {
           marginTop: "10px"
         }}>
           {data.text}
+          {data.text && (
+            <button 
+              onClick={() => navigator.clipboard.writeText(data.text)}
+              style={{
+                position: "absolute",
+                top: "40px",
+                right: "10px",
+                padding: "5px 10px",
+                fontSize: "12px",
+                backgroundColor: "#007BFF",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer"
+              }}
+            >
+              Copy
+            </button>
+          )}
         </div>
       </div>
 
