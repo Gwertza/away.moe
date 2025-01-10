@@ -45,9 +45,18 @@ const DownloadPage = ({ data, setDownloadProgress, downloadProgress }) => {
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
       <h1>Entry Found</h1>
-      <p>
-        <strong>Text:</strong> {data.text}
-      </p>
+      <div style={{ textAlign: "left", maxWidth: "800px", margin: "0 auto" }}>
+        <strong>Text:</strong>
+        <div style={{ 
+          whiteSpace: "pre-wrap", 
+          backgroundColor: "#f5f5f5",
+          padding: "15px",
+          borderRadius: "4px",
+          marginTop: "10px"
+        }}>
+          {data.text}
+        </div>
+      </div>
 
       {hasFile && (
           <>
