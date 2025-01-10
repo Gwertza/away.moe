@@ -140,7 +140,7 @@ class SQLiteDatabase(Database):
                 expiration_time = None if entry.instant_expire else (datetime.fromtimestamp(entry.expiration_time)).strftime("%Y-%m-%d %H:%M:%S")
                 cursor.execute("""
                     INSERT INTO File (FileName, Path, ID, ExpiryTime)
-                    VALUES (?, ?, ?)
+                    VALUES (?, ?, ?, ?)
                 """, (entry.file_name, file_path, unique_id, expiration_time))
 
 
