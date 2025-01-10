@@ -155,11 +155,11 @@ const UploadForm = ({ uniqueId, setUploadProgress, uploadProgress }) => {
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.formGroup}>
           <label>Text:</label>
-          <input
-            type="text"
+          <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            style={styles.input}
+            style={{ ...styles.input, minHeight: "100px", resize: "vertical" }}
+            placeholder="Enter your text here..."
           />
         </div>
         <div style={styles.formGroup}>
@@ -267,6 +267,7 @@ const styles = {
     margin: "5px 0",
     border: "1px solid #ccc",
     borderRadius: "4px",
+    fontFamily: "inherit",
   },
   dropZone: {
     width: "100%",
