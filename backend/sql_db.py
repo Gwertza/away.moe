@@ -115,7 +115,7 @@ class SQLiteDatabase(Database):
     #     cursor.execute("SELECT 1 FROM File WHERE ID = ?", (unique_id,))
     #     return cursor.fetchone() is not None
 
-    def add_to_database(self, unique_id, entry: FileEntry, file: FileStorage):
+    def add_to_database(self, unique_id, entry: FileEntry, file: FileStorage | None):
         print(f"unique_id: {unique_id}, expiration_time: {entry.expiration_time}, instant_expire: {entry.instant_expire}")
         """Add data to the database."""
         with self.conn:
@@ -137,10 +137,11 @@ class SQLiteDatabase(Database):
                 file_path = f"./files/{uuid.uuid1()}"
                 Path("./files").mkdir(exist_ok=True)  # Ensure the directory exists
                 file.save(file_path)
+                expiration_time = None if entry.instant_expire else (datetime.fromtimestamp(entry.expiration_time)).strftime("%Y-%m-%d %H:%M:%S")
                 cursor.execute("""
-                    INSERT INTO File (FileName, Path, ID)
+                    INSERT INTO File (FileName, Path, ID, ExpiryTime)
                     VALUES (?, ?, ?)
-                """, (entry.file_name, file_path, unique_id))
+                """, (entry.file_name, file_path, unique_id, expiration_time))
 
 
 
