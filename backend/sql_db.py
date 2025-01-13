@@ -137,7 +137,7 @@ class SQLiteDatabase(Database):
                 file_path = f"./files/{uuid.uuid1()}"
                 Path("./files").mkdir(exist_ok=True)  # Ensure the directory exists
                 file.save(file_path)
-                expiration_time = None if entry.instant_expire else (datetime.fromtimestamp(entry.expiration_time)).strftime("%Y-%m-%d %H:%M:%S")
+                expiration_time = datetime.fromtimestamp(entry.expiration_time).strftime("%Y-%m-%d %H:%M:%S")
                 cursor.execute("""
                     INSERT INTO File (FileName, Path, ID, ExpiryTime)
                     VALUES (?, ?, ?, ?)
