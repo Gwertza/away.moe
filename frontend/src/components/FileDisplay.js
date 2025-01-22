@@ -14,23 +14,26 @@ const FileHandler = () => {
   const [downloadProgress, setDownloadProgress] = useState(0);
 
   useEffect(() => {
-    // Check if the entry exists for the unique ID
-    fetch(`${BASE_URL}/api/fetch_info/${uniqueId}`)
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (data.id_present === true) {
-          setData(data);
-        } else {
-          throw new Error("ID not present");
-        }
-      })
-      .catch(() => setNotFound(true));
-  }, [uniqueId]);
+  // Check if the entry exists for the unique ID
+  fetch(`${BASE_URL}/api/fetch_info/${uniqueId}`)
+    .then(async (res) => {
+      if (!res.ok) {
+        const error = await res.json(); // Extract error message from response
+        throw new Error(error.message || "Network response was not ok");
+      }
+      return res.json();
+    })
+    .then((data) => {
+      if (data.id_present === true) {
+        setData(data); // Set data if ID is present
+      } else {
+        setNotFound(true); // Mark as not found if ID is not present
+      }
+    })
+    .catch((err) => {
+      alert(err.message); // Log the error message
+    });
+}, [uniqueId]);
 
   if (notFound) {
     return <UploadForm uniqueId={uniqueId} setUploadProgress={setUploadProgress} uploadProgress={uploadProgress} />;
