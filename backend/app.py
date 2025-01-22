@@ -85,7 +85,10 @@ def fetch_info(unique_id: str):
         json_response["text"] = entry.text
         if entry.has_file:
             json_response["filename"] = entry.file_name
-            json_response["filesize"] = os.path.getsize(db.retrieve_file_path(unique_id))
+            try:
+                json_response["filesize"] = os.path.getsize(db.retrieve_file_path(unique_id))
+            except FileNotFoundError:
+                return jsonify({"message": "File does not exist"}), 400
         elif entry.instant_expire:
             db.delete_from_database(unique_id)
         return jsonify(json_response)
