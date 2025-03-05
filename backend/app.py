@@ -13,7 +13,7 @@ from database import Database, FileEntry
 app = Flask(__name__, static_folder="../frontend/build", static_url_path="/")
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB limit
 
-db: SQLiteDatabase = SQLiteDatabase()
+db: Database = SQLiteDatabase()
 # db: Database = PythonDatabase()
 CORS(app)
 
@@ -125,7 +125,6 @@ def get_future_timestamp(expiration_str: str) -> tuple[int, bool] | tuple[None, 
     print(f"got expiration time {expiration_str}")
     # Check if the expiration time is valid
     if not is_instant_expire and expiration_str not in time_deltas:
-        print("got none damn")
         return None, None
 
     expiration_key = "1w" if is_instant_expire else expiration_str
@@ -133,4 +132,4 @@ def get_future_timestamp(expiration_str: str) -> tuple[int, bool] | tuple[None, 
     return int(expiration_datetime.timestamp()), is_instant_expire
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=443, debug=True)
+    app.run(host='0.0.0.0', port=443)

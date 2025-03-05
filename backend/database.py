@@ -21,10 +21,6 @@ class Database(ABC):
     def entry_present(self, unique_id: str):
         raise NotImplementedError
 
-    # @abstractmethod
-    # def file_present(self, unique_id: str):
-    #     raise NotImplementedError
-
     @abstractmethod
     def retrieve_entry(self, unique_id: str) -> FileEntry:
         raise NotImplementedError
@@ -34,12 +30,16 @@ class Database(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def retrieve_file_path(self, unique_id: str) -> Path:
+        raise NotImplementedError
+
+    @abstractmethod
     def delete_from_database(self, unique_id: str):
         raise NotImplementedError
 
     @classmethod
     def check_expired(cls, entry: FileEntry) -> bool:
-        return datetime.now().timestamp() >= entry.expiration_time
+        return datetime.now().timestamp() > entry.expiration_time
 
     # @abstractmethod
     # def retrieve_file(self, unique_id: str) -> Path:
@@ -60,7 +60,6 @@ class Database(ABC):
     # @abstractmethod
     # def get_instant_expire(self, unique_id: str) -> bool:
     #     raise NotImplementedError
-
 
 
 
